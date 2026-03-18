@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Clock, Settings, Plus, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +25,7 @@ const ChatList = ({ onSelectChat, onNewChat, onOpenSettings, selectedId }: ChatL
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
 
     const { data: participations } = await supabase
@@ -84,7 +84,7 @@ const ChatList = ({ onSelectChat, onNewChat, onOpenSettings, selectedId }: ChatL
 
     setConversations(convDetails);
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchConversations();
@@ -98,7 +98,7 @@ const ChatList = ({ onSelectChat, onNewChat, onOpenSettings, selectedId }: ChatL
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, fetchConversations]);
 
   return (
     <div className="flex flex-col h-full bg-background">

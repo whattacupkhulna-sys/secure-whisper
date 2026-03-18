@@ -1,5 +1,6 @@
-import { ArrowLeft, Shield, Clock, Mic, Lock, LogOut } from "lucide-react";
+import { ArrowLeft, Shield, Clock, Mic, Lock, LogOut, Moon, Sun } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -7,6 +8,7 @@ interface SettingsScreenProps {
 
 const SettingsScreen = ({ onBack }: SettingsScreenProps) => {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const displayName = user?.user_metadata?.display_name || user?.email || "User";
 
   return (
@@ -61,6 +63,20 @@ const SettingsScreen = ({ onBack }: SettingsScreenProps) => {
               All messages are permanently and irrecoverably deleted 10 days after being sent. This cannot be disabled.
             </p>
           </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Appearance</h3>
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              <span className="text-sm">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">{theme === 'dark' ? 'On' : 'Off'}</span>
+          </button>
         </div>
 
         <button
