@@ -1,11 +1,14 @@
-import { ArrowLeft, Shield, Clock, Mic, Lock } from "lucide-react";
+import { ArrowLeft, Shield, Clock, Mic, Lock, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SettingsScreenProps {
-  userName: string;
   onBack: () => void;
 }
 
-const SettingsScreen = ({ userName, onBack }: SettingsScreenProps) => {
+const SettingsScreen = ({ onBack }: SettingsScreenProps) => {
+  const { user, signOut } = useAuth();
+  const displayName = user?.user_metadata?.display_name || user?.email || "User";
+
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
@@ -16,20 +19,18 @@ const SettingsScreen = ({ userName, onBack }: SettingsScreenProps) => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Profile */}
         <div className="bg-card rounded-lg border border-border p-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-foreground font-bold text-lg">
-              {userName.charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">{userName}</p>
+              <p className="text-sm font-semibold text-foreground">{displayName}</p>
               <p className="text-xs text-muted-foreground font-mono">Zero-Knowledge User</p>
             </div>
           </div>
         </div>
 
-        {/* Privacy Status */}
         <div className="bg-card rounded-lg border border-border p-4 space-y-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Shield className="w-4 h-4 text-primary" />
@@ -41,7 +42,6 @@ const SettingsScreen = ({ userName, onBack }: SettingsScreenProps) => {
           </div>
         </div>
 
-        {/* Permissions */}
         <div className="bg-card rounded-lg border border-border p-4 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Permissions</h3>
           <div className="space-y-2">
@@ -50,7 +50,6 @@ const SettingsScreen = ({ userName, onBack }: SettingsScreenProps) => {
           </div>
         </div>
 
-        {/* Data Retention */}
         <div className="bg-card rounded-lg border border-border p-4 space-y-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
@@ -59,11 +58,18 @@ const SettingsScreen = ({ userName, onBack }: SettingsScreenProps) => {
           <div className="bg-muted rounded-lg p-3">
             <p className="text-sm text-foreground font-medium">10-Day Auto-Deletion</p>
             <p className="text-xs text-muted-foreground mt-1">
-              All messages are permanently and irrecoverably deleted 10 days after being sent.
-              This cannot be disabled.
+              All messages are permanently and irrecoverably deleted 10 days after being sent. This cannot be disabled.
             </p>
           </div>
         </div>
+
+        <button
+          onClick={signOut}
+          className="w-full bg-destructive/10 text-destructive rounded-lg py-3 text-sm font-medium hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
+        </button>
       </div>
     </div>
   );
