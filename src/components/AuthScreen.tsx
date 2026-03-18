@@ -1,20 +1,36 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Lock } from "lucide-react";
+import { Shield, Lock, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
-interface AuthScreenProps {
-  onAuth: (user: { name: string; email: string; phone: string }) => void;
-}
-
-const AuthScreen = ({ onAuth }: AuthScreenProps) => {
+const AuthScreen = () => {
+  const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAuth({ name: name || "User", email, phone });
+    setLoading(true);
+
+    if (isSignUp) {
+      const { error } = await signUp(email, password, name, phone || undefined);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Account created! Check your email to confirm.");
+      }
+    } else {
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast.error(error.message);
+      }
+    }
+    setLoading(false);
   };
 
   return (
@@ -63,24 +79,37 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                 required
               />
             </div>
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1.5">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder="••••••••"
+                required
+                minLength={6}
+              />
+            </div>
             {isSignUp && (
               <div>
-                <label className="block text-sm text-muted-foreground mb-1.5">Phone</label>
+                <label className="block text-sm text-muted-foreground mb-1.5">Phone (optional)</label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   placeholder="+1 (555) 000-0000"
-                  required
                 />
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSignUp ? "Create Account" : "Sign In"}
             </button>
           </form>
