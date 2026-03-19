@@ -10,5 +10,5 @@ DROP POLICY "Authenticated users can add participants" ON public.conversation_pa
 CREATE POLICY "Users can add participants to their conversations" ON public.conversation_participants FOR INSERT TO authenticated
   WITH CHECK (
     auth.uid() = user_id 
-    OR EXISTS (SELECT 1 FROM public.conversation_participants cp WHERE cp.conversation_id = conversation_id AND cp.user_id = auth.uid())
+    OR is_conversation_participant(conversation_id, auth.uid())
   );

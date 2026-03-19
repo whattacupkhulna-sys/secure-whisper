@@ -39,9 +39,12 @@ CREATE POLICY "Users can view their conversations" ON public.conversations FOR S
 CREATE POLICY "Authenticated users can create conversations" ON public.conversations FOR INSERT TO authenticated WITH CHECK (true);
 
 CREATE POLICY "Users can view their participations" ON public.conversation_participants FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.conversation_participants cp WHERE cp.conversation_id = conversation_id AND cp.user_id = auth.uid()));
+  USING (user_id = auth.uid() OR is_conversation_participant(conversation_id, auth.uid()));
 
-CREATE POLICY "Authenticated users can add participants" ON public.conversation_participants FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Authenticated users can add participants" ON public.conversation_participants FOR INSERT TO authenticated WITH CHECK (
+  auth.uid() = user_id
+  OR is_conversation_participant(conversation_id, auth.uid())
+);
 
 -- Messages table
 CREATE TABLE public.messages (
@@ -55,11 +58,24 @@ CREATE TABLE public.messages (
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
+-- Helper function for checking conversation membership without triggering RLS recursion
+CREATE OR REPLACE FUNCTION public.is_conversation_participant(conversation_uuid UUID, user_uuid UUID)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS(
+    SELECT 1 FROM public.conversation_participants
+    WHERE conversation_id = conversation_uuid AND user_id = user_uuid
+  );
+$$;
+
 CREATE POLICY "Users can view messages in their conversations" ON public.messages FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = messages.conversation_id AND user_id = auth.uid()));
+  USING (is_conversation_participant(messages.conversation_id, auth.uid()));
 
 CREATE POLICY "Users can send messages to their conversations" ON public.messages FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = sender_id AND EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = messages.conversation_id AND user_id = auth.uid()));
+  WITH CHECK (auth.uid() = sender_id AND is_conversation_participant(messages.conversation_id, auth.uid()));
 
 -- Auto-delete expired messages function
 CREATE OR REPLACE FUNCTION public.delete_expired_messages()
