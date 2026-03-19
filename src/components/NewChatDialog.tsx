@@ -81,20 +81,36 @@ const NewChatDialog = ({ onClose, onStartChat }: NewChatDialogProps) => {
 
     if (convError) {
       console.error("Failed to create conversation", convError);
-      toast.error(`Failed to create conversation: ${convError.message}`);
+      toast.error(
+        `Failed to create conversation: ${convError.message} ${convError.details ?? ""}`.trim()
+      );
       setCreating(false);
       return;
     }
 
-    // Add both participants
-    const { error: partError } = await supabase.from("conversation_participants").insert([
+    // Add the current user first (RLS allows this), then add the other user
+    const { error: partErrorSelf } = await supabase.from("conversation_participants").insert([
       { conversation_id: conversationId, user_id: user.id },
+    ]);
+
+    if (partErrorSelf) {
+      console.error("Failed to add self to conversation", partErrorSelf);
+      toast.error(
+        `Failed to add yourself to conversation: ${partErrorSelf.message} ${partErrorSelf.details ?? ""}`.trim()
+      );
+      setCreating(false);
+      return;
+    }
+
+    const { error: partErrorOther } = await supabase.from("conversation_participants").insert([
       { conversation_id: conversationId, user_id: targetUserId },
     ]);
 
-    if (partError) {
-      console.error("Failed to add participants", partError);
-      toast.error(`Failed to add participants: ${partError.message}`);
+    if (partErrorOther) {
+      console.error("Failed to add participant", partErrorOther);
+      toast.error(
+        `Failed to add participant: ${partErrorOther.message} ${partErrorOther.details ?? ""}`.trim()
+      );
       setCreating(false);
       return;
     }
