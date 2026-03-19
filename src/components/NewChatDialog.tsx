@@ -43,57 +43,63 @@ const NewChatDialog = ({ onClose, onStartChat }: NewChatDialogProps) => {
 
   const handleStartChat = async (targetUserId: string, targetName: string) => {
     if (!user || creating) return;
+
+    if (targetUserId === user.id) {
+      toast.error("Can't start a chat with yourself");
+      return;
+    }
+
     setCreating(true);
 
-    // Check if conversation already exists
+    // Check if conversation already exists for the two users
     const { data: myParticipations } = await supabase
       .from("conversation_participants")
       .select("conversation_id")
       .eq("user_id", user.id);
 
-    if (myParticipations) {
-      for (const p of myParticipations) {
-        const { data: otherP } = await supabase
-          .from("conversation_participants")
-          .select("user_id")
-          .eq("conversation_id", p.conversation_id)
-          .eq("user_id", targetUserId)
-          .single();
+    if (myParticipations?.length) {
+      const conversationIds = myParticipations.map((p) => p.conversation_id);
+      const { data: shared } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .in("conversation_id", conversationIds)
+        .eq("user_id", targetUserId)
+        .limit(1);
 
-        if (otherP) {
-          onStartChat(p.conversation_id, targetName);
-          setCreating(false);
-          return;
-        }
+      if (shared?.length) {
+        onStartChat(shared[0].conversation_id, targetName);
+        setCreating(false);
+        return;
       }
     }
 
-    // Create new conversation
-    const { data: conv, error: convError } = await supabase
+    // Create new conversation (avoid needing to SELECT it back; RLS can block reading immediately)
+    const conversationId = crypto.randomUUID();
+    const { error: convError } = await supabase
       .from("conversations")
-      .insert({})
-      .select("id")
-      .single();
+      .insert({ id: conversationId }, { returning: "minimal" });
 
-    if (convError || !conv) {
-      toast.error("Failed to create conversation");
+    if (convError) {
+      console.error("Failed to create conversation", convError);
+      toast.error(`Failed to create conversation: ${convError.message}`);
       setCreating(false);
       return;
     }
 
     // Add both participants
     const { error: partError } = await supabase.from("conversation_participants").insert([
-      { conversation_id: conv.id, user_id: user.id },
-      { conversation_id: conv.id, user_id: targetUserId },
+      { conversation_id: conversationId, user_id: user.id },
+      { conversation_id: conversationId, user_id: targetUserId },
     ]);
 
     if (partError) {
-      toast.error("Failed to add participants");
+      console.error("Failed to add participants", partError);
+      toast.error(`Failed to add participants: ${partError.message}`);
       setCreating(false);
       return;
     }
 
-    onStartChat(conv.id, targetName);
+    onStartChat(conversationId, targetName);
     setCreating(false);
   };
 
